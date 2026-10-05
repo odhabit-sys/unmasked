@@ -13,7 +13,7 @@
 //   falling   released after removal; gravity until off-screen
 //   gone      waiting to respawn on the face
 
-export const MASK_SRC = '/monster-mask.png';
+export const MASK_SRC = `${import.meta.env.BASE_URL}monster-mask.png`;
 
 // Where the face sits inside a mask PNG (image pixels). Each monster has its
 // own; this one was measured from monster-mask.png (the default green monster).

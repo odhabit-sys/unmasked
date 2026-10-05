@@ -58,7 +58,7 @@ function cleanName(raw) {
 const revealEl = document.getElementById('reveal');
 const revealTextEl = document.getElementById('reveal-text');
 const frameWrap = document.querySelector('.frame-wrap');
-const revealAudio = new Audio('/audio/scooby_reveal_3m06_to_3m10.mp3');
+const revealAudio = new Audio(`${import.meta.env.BASE_URL}audio/scooby_reveal_3m06_to_3m10.mp3`);
 revealAudio.preload = 'auto';
 let revealed = false;
 

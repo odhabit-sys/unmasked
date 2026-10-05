@@ -9,13 +9,13 @@ export const MONSTERS = [
   {
     id: 'ghoul',
     name: 'GREEN GHOUL',
-    src: '/monster-mask.png',
+    src: `${import.meta.env.BASE_URL}monster-mask.png`,
     art: DEFAULT_ART,
   },
   {
     id: 'werewolf',
     name: 'WEREWOLF',
-    src: '/monster-werewolf.png',
+    src: `${import.meta.env.BASE_URL}monster-werewolf.png`,
     // Measured from monster-werewolf.png (1312×1199): eyes ≈ y 650, chin ≈ y 1150,
     // inner face (without ears) ≈ x 375–950. Fit is slightly tighter than the art
     // so the narrow jaw (which slants right) still covers a real chin; eyes ~42% down.
@@ -24,7 +24,7 @@ export const MONSTERS = [
   {
     id: 'diver',
     name: 'SEA DIVER',
-    src: '/monster-diver.png',
+    src: `${import.meta.env.BASE_URL}monster-diver.png`,
     // Measured from monster-diver.png: dome above the forehead, porthole at eye level.
     art: { anchorX: 606, anchorY: 530, faceTop: 200, faceBottom: 860, faceWidth: 580 },
   },
