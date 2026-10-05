@@ -89,14 +89,6 @@ Then open the local URL Vite prints (usually `http://localhost:5173`) in Chrome 
 
 ---
 
-<sub>
-
 **Unofficial fan project.** Unmasked is an independent, experimental project inspired by classic cartoon mystery reveals. It is not affiliated with, sponsored by or endorsed by Warner Bros., Hanna-Barbera or any rights holder. _Scooby-Doo_ and related names are trademarks of their respective owners.
 
-</sub>
-
-<div align="center">
-
 **Made by Reda**
-
-</div>
