@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unmasked!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet" />
+  </head>
+  <body class="mode-intro">
+    <video id="video" playsinline muted></video>
+
+    <!-- Shared SVG filters -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <!-- Slight hand-drawn wobble for outlines -->
+        <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="7" />
+          <feDisplacementMap in="SourceGraphic" scale="3" />
+        </filter>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- ===== Game UI ===== -->
+    <main class="stage">
+      <h1 class="logo" aria-label="UNMASKED!">
+        <svg class="sparks sparks-left" viewBox="0 0 60 70" aria-hidden="true">
+          <path d="M12,10 L36,24 M4,36 L34,36 M12,62 L36,48" />
+        </svg>
+        <span class="logo-word" aria-hidden="true">
+          <span data-l="U" style="--r: -6deg; --y: 0.04em">U</span>
+          <span data-l="N" style="--r: 3deg; --y: -0.03em">N</span>
+          <span data-l="M" style="--r: -2deg; --y: 0.02em">M</span>
+          <span data-l="A" style="--r: 4deg; --y: -0.05em">A</span>
+          <span data-l="S" style="--r: -5deg; --y: 0.03em">S</span>
+          <span data-l="K" style="--r: 3deg; --y: -0.02em">K</span>
+          <span data-l="E" style="--r: -3deg; --y: 0.04em">E</span>
+          <span data-l="D" style="--r: 5deg; --y: -0.03em">D</span>
+          <span data-l="!" style="--r: 10deg; --y: -0.06em">!</span>
+        </span>
+        <svg class="sparks sparks-right" viewBox="0 0 60 70" aria-hidden="true">
+          <path d="M48,10 L24,24 M56,36 L26,36 M48,62 L24,48" />
+        </svg>
+      </h1>
+
+      <!-- ===== Intro: name entry (shown before the camera starts) ===== -->
+      <form id="intro" class="intro" novalidate autocomplete="off">
+        <h2 class="intro-question">WHO'S BEHIND THE MASK?</h2>
+        <label class="visually-hidden" for="name-input">Your name</label>
+        <input
+          id="name-input"
+          class="name-input"
+          type="text"
+          name="name"
+          placeholder="Enter your name..."
+          maxlength="24"
+          spellcheck="false"
+          autocapitalize="words"
+          required
+        />
+        <p id="name-error" class="name-error" role="alert"></p>
+
+        <h3 class="choose-title">CHOOSE YOUR MONSTER</h3>
+        <div id="monster-grid" class="monster-grid" role="radiogroup" aria-label="Choose your monster"></div>
+
+        <button id="start-btn" class="start-btn" type="submit">START MYSTERY</button>
+      </form>
+
+      <div class="frame-wrap">
+        <div class="frame">
+          <canvas id="canvas"></canvas>
+          <div id="status">Requesting camera…</div>
+          <button id="change-name-btn" class="change-name-btn" type="button">✎ CHANGE NAME</button>
+        </div>
+        <div class="frame-edge" aria-hidden="true"></div>
+
+        <button id="reset-btn" class="reset-btn" type="button">
+          <svg class="reset-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+            <path d="M20 4v5h-5" />
+          </svg>
+          RESET MASK
+        </button>
+
+        <!-- Reveal banner: shown when the mask pops off -->
+        <div id="reveal" class="banner banner-reveal" aria-live="polite">
+          <svg class="banner-bg" viewBox="0 0 476 104" preserveAspectRatio="none" aria-hidden="true">
+            <path class="banner-shadow" d="M14,22 L40,8 L74,15 L110,5 L150,13 L196,4 L240,12 L286,3 L330,11 L374,4 L414,12 L446,6 L470,24 L460,46 L474,66 L462,92 L430,98 L392,91 L350,99 L306,92 L262,100 L218,93 L174,100 L130,92 L88,99 L50,92 L16,97 L6,78 L14,58 L2,40Z" />
+            <path class="banner-fill" d="M14,22 L40,8 L74,15 L110,5 L150,13 L196,4 L240,12 L286,3 L330,11 L374,4 L414,12 L446,6 L470,24 L460,46 L474,66 L462,92 L430,98 L392,91 L350,99 L306,92 L262,100 L218,93 L174,100 L130,92 L88,99 L50,92 L16,97 L6,78 L14,58 L2,40Z" />
+          </svg>
+          <span id="reveal-text" class="banner-text">THE MONSTER WAS … ALL ALONG!</span>
+        </div>
+
+        <div class="banner banner-instruction">
+          <svg class="banner-bg" viewBox="0 0 340 90" preserveAspectRatio="none" aria-hidden="true">
+            <path
+              class="banner-shadow"
+              d="M10,18 L28,8 L52,13 L80,5 L112,12 L146,4 L180,10 L214,3 L248,9 L282,4 L318,11 L334,20 L326,40 L337,58 L328,80 L296,86 L262,81 L226,88 L190,82 L154,89 L118,83 L84,88 L50,82 L18,86 L6,72 L13,52 L2,34Z"
+            />
+            <path
+              class="banner-fill"
+              d="M10,18 L28,8 L52,13 L80,5 L112,12 L146,4 L180,10 L214,3 L248,9 L282,4 L318,11 L334,20 L326,40 L337,58 L328,80 L296,86 L262,81 L226,88 L190,82 L154,89 L118,83 L84,88 L50,82 L18,86 L6,72 L13,52 L2,34Z"
+            />
+          </svg>
+          <span class="banner-text">PINCH &amp; PULL</span>
+        </div>
+      </div>
+
+      <!-- Reserved space below the camera for the upcoming reveal banner -->
+      <div class="reveal-slot" aria-hidden="true"></div>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

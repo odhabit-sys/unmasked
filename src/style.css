@@ -1,0 +1,686 @@
+:root {
+  --night: #1c0d38;
+  --night-deep: #0a0418;
+  --purple: #7a2ee6;
+  --purple-hi: #a160ff;
+  --purple-lo: #4e14a6;
+  --banner-purple: #6b1fc9;
+  --lime: #b8f238;
+  --lime-dark: #6d9c12;
+  --yellow: #e6ff5a;
+  --ink: #0b0418;
+
+  /* Vertical space taken by logo + reveal slot + gaps (camera gets the rest) */
+  --logo-size: min(clamp(60px, 14.5vh, 156px), 12vw);
+  --slot-h: clamp(64px, 10vh, 110px);
+  --chrome-h: calc(var(--logo-size) * 1.3 + var(--slot-h) + 64px);
+  --radius: clamp(16px, 2vw, 28px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Bangers', 'Impact', system-ui, sans-serif;
+  color: #fff;
+  /* Illustrated haunted-night backdrop; the empty middle is where the camera sits */
+  background: var(--night-deep) url('/background.jpg') center / cover no-repeat;
+}
+
+/* Video is only a frame source; everything is drawn on the canvas. */
+#video {
+  display: none;
+}
+
+/* ---------- Layout ---------- */
+
+.stage {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(6px, 1.2vh, 14px);
+  padding: clamp(14px, 2.6vh, 28px) 16px 0;
+}
+
+/* ---------- Logo ---------- */
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.12em;
+  font-size: var(--logo-size);
+  font-weight: 400;
+  line-height: 1;
+  user-select: none;
+  transform: rotate(-1.5deg);
+}
+
+.logo-word {
+  display: inline-flex;
+  letter-spacing: 0.01em;
+}
+
+.logo-word span {
+  position: relative;
+  display: inline-block;
+  transform: rotate(var(--r)) translateY(var(--y));
+  padding: 0 0.015em;
+  color: var(--purple);
+}
+
+/* Lime outline (behind the purple fill) */
+.logo-word span::before,
+.logo-word span::after {
+  content: attr(data-l);
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  pointer-events: none;
+}
+
+.logo-word span::before {
+  z-index: -1;
+  color: var(--lime);
+  -webkit-text-stroke: 0.14em var(--lime);
+}
+
+/* Dark extruded shadow (behind the outline) */
+.logo-word span::after {
+  z-index: -2;
+  color: var(--ink);
+  -webkit-text-stroke: 0.2em var(--ink);
+  transform: translate(0.04em, 0.08em);
+}
+
+.sparks {
+  width: 0.5em;
+  height: 0.6em;
+  flex: none;
+}
+
+.sparks path {
+  stroke: var(--lime);
+  stroke-width: 7;
+  stroke-linecap: round;
+  fill: none;
+  filter: drop-shadow(2px 3px 0 var(--ink));
+}
+
+/* ---------- Camera frame ---------- */
+
+.frame-wrap {
+  position: relative;
+  flex: none;
+  /* As big as possible: limited by width, or by height left after logo + reveal slot */
+  width: min(100%, calc((100vh - var(--chrome-h)) * 16 / 9));
+  aspect-ratio: 16 / 9;
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+  box-shadow:
+    0 0 0 6px var(--ink),
+    0 18px 0 2px rgba(11, 4, 24, 0.85),
+    0 26px 60px rgba(0, 0, 0, 0.7),
+    0 0 90px rgba(150, 70, 255, 0.35);
+}
+
+/* Lime outline drawn on top of the video, with a slight hand-drawn wobble */
+.frame-edge {
+  position: absolute;
+  inset: -2px;
+  border: 5px solid var(--lime);
+  border-radius: calc(var(--radius) + 2px);
+  pointer-events: none;
+  filter: url(#rough);
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-1deg);
+  max-width: 80%;
+  padding: 12px 22px 8px;
+  border-radius: 12px;
+  background: rgba(28, 13, 56, 0.9);
+  border: 3px solid var(--lime);
+  color: var(--yellow);
+  font-size: clamp(18px, 2.6vh, 26px);
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+#status.hidden {
+  display: none;
+}
+
+/* ---------- Banners ---------- */
+
+.banner {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.banner-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.banner-text {
+  position: relative;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  padding-top: 0.08em;
+}
+
+/* PINCH & PULL: torn purple paint strip over the bottom-left of the camera */
+.banner-instruction {
+  left: 4%;
+  bottom: calc(clamp(34px, 5.5vh, 60px) * -0.75);
+  height: clamp(52px, 9vh, 100px);
+  padding: 0 1.3em;
+  font-size: clamp(28px, 5.6vh, 62px);
+  transform: rotate(-3deg);
+}
+
+.banner-instruction .banner-fill {
+  fill: var(--banner-purple);
+  filter: url(#rough);
+}
+
+.banner-instruction .banner-shadow {
+  fill: var(--ink);
+  transform: translate(4px, 6px);
+  filter: url(#rough);
+}
+
+.banner-instruction .banner-text {
+  color: var(--yellow);
+  text-shadow:
+    2px 2px 0 var(--ink),
+    3px 4px 0 rgba(11, 4, 24, 0.6);
+}
+
+/* REVEAL: orange torn banner, pops in under the camera when the mask comes off */
+.banner-reveal {
+  left: 3%;
+  bottom: calc(var(--slot-h) * -0.92);
+  z-index: 3;
+  height: clamp(58px, 10vh, 112px);
+  padding: 0 1.1em;
+  font-size: calc(clamp(26px, 5.2vh, 58px) * var(--fit, 1));
+  visibility: hidden;
+  opacity: 0;
+  transform: rotate(-2.5deg) scale(0.3);
+  transform-origin: 40% 50%;
+}
+
+.banner-reveal.show {
+  visibility: visible;
+  animation: reveal-pop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+
+@keyframes reveal-pop {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scale(0.3);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(1deg) scale(1.12);
+  }
+  80% {
+    transform: rotate(-3.5deg) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-2.5deg) scale(1);
+  }
+}
+
+.banner-reveal .banner-fill {
+  fill: #ff7a1a;
+  filter: url(#rough);
+}
+
+.banner-reveal .banner-shadow {
+  fill: var(--ink);
+  transform: translate(5px, 8px);
+  filter: url(#rough);
+}
+
+.banner-reveal .banner-text {
+  color: #120614;
+  text-shadow: 2px 2px 0 rgba(255, 190, 120, 0.55);
+}
+
+/* The instruction steps aside while the reveal banner is showing */
+.banner-instruction {
+  transition: opacity 0.25s ease;
+}
+
+.revealed .banner-instruction {
+  opacity: 0;
+}
+
+/* ---------- Reset button (bottom-right, under the camera) ---------- */
+
+.reset-btn {
+  position: absolute;
+  right: 4%;
+  bottom: calc(clamp(40px, 6.5vh, 66px) * -0.72);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.45em 1em 0.35em;
+  font-family: inherit;
+  font-size: clamp(18px, 3vh, 30px);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: var(--lime);
+  background: #2a1f42;
+  border: 3px solid var(--lime);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 3px var(--ink),
+    4px 6px 0 3px var(--ink);
+  transform: rotate(2deg);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.reset-btn:hover {
+  background: #352750;
+  transform: rotate(2deg) translateY(-2px);
+  box-shadow:
+    0 0 0 3px var(--ink),
+    5px 8px 0 3px var(--ink);
+}
+
+.reset-btn:active {
+  transform: rotate(2deg) translateY(3px);
+  box-shadow:
+    0 0 0 3px var(--ink),
+    2px 3px 0 3px var(--ink);
+}
+
+.reset-btn:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 4px;
+}
+
+.reset-icon {
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: translateY(-0.05em);
+}
+
+/* ---------- Change name (small, top-right inside the camera) ---------- */
+
+.change-name-btn {
+  position: absolute;
+  top: clamp(8px, 1.6vh, 16px);
+  right: clamp(10px, 1.4vw, 18px);
+  z-index: 2;
+  padding: 0.4em 0.8em 0.3em;
+  font-family: inherit;
+  font-size: clamp(13px, 1.8vh, 18px);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: var(--lime);
+  background: rgba(20, 10, 38, 0.72);
+  border: 2px solid rgba(184, 242, 56, 0.7);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.change-name-btn:hover,
+.change-name-btn:focus-visible {
+  opacity: 1;
+  background: rgba(42, 31, 66, 0.92);
+}
+
+.change-name-btn:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+/* ---------- Intro / name entry ---------- */
+
+body.mode-intro .frame-wrap,
+body.mode-intro .reveal-slot {
+  display: none;
+}
+
+body:not(.mode-intro) .intro {
+  display: none;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 2vh, 22px);
+  width: min(640px, 100%);
+  margin-top: clamp(8px, 2.5vh, 36px);
+  padding: clamp(18px, 3vh, 34px) clamp(18px, 3.5vw, 40px);
+  background: rgba(20, 9, 40, 0.82);
+  border: 4px solid var(--lime);
+  border-radius: 26px;
+  box-shadow:
+    0 0 0 5px var(--ink),
+    8px 12px 0 5px var(--ink),
+    0 0 70px rgba(150, 70, 255, 0.35);
+  transform: rotate(-1deg);
+}
+
+.intro-question {
+  font-weight: 400;
+  font-size: clamp(30px, 5.6vh, 54px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--yellow);
+  text-shadow:
+    3px 3px 0 var(--ink),
+    4px 5px 0 rgba(11, 4, 24, 0.6);
+}
+
+.name-input {
+  width: 100%;
+  padding: 0.45em 0.7em 0.35em;
+  font-family: inherit;
+  font-size: clamp(24px, 4vh, 36px);
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: #fff;
+  background: #2a1f42;
+  border: 3px solid var(--purple-hi);
+  border-radius: 16px;
+  box-shadow: inset 0 4px 0 rgba(0, 0, 0, 0.35);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.name-input::placeholder {
+  color: rgba(220, 200, 255, 0.45);
+}
+
+.name-input:focus {
+  border-color: var(--lime);
+  box-shadow:
+    inset 0 4px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 4px rgba(184, 242, 56, 0.25);
+}
+
+.name-error {
+  min-height: 1.1em;
+  margin-top: -0.4em;
+  font-size: clamp(16px, 2.4vh, 22px);
+  letter-spacing: 0.05em;
+  color: #ff9a4d;
+}
+
+/* ---------- Monster selection ---------- */
+
+.choose-title {
+  margin-top: -0.2em;
+  font-weight: 400;
+  font-size: clamp(22px, 3.6vh, 34px);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--lime);
+  text-shadow: 2px 3px 0 var(--ink);
+}
+
+.monster-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(10px, 1.6vw, 18px);
+  width: 100%;
+}
+
+.monster-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35em;
+  padding: clamp(8px, 1.4vh, 14px) 6px clamp(6px, 1vh, 10px);
+  font-family: inherit;
+  color: #e9dcff;
+  background: #2a1f42;
+  border: 3px solid rgba(184, 242, 56, 0.45);
+  /* Irregular comic corners */
+  border-radius: 22px 14px 24px 12px / 14px 24px 12px 22px;
+  box-shadow: 4px 6px 0 var(--ink);
+  transform: rotate(var(--tilt, 0deg));
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.monster-card:nth-child(1) {
+  --tilt: -2deg;
+}
+.monster-card:nth-child(2) {
+  --tilt: 1.5deg;
+}
+.monster-card:nth-child(3) {
+  --tilt: -1deg;
+}
+
+.monster-card:hover:not(:disabled) {
+  transform: rotate(0deg) translateY(-4px) scale(1.04);
+  border-color: var(--lime);
+  box-shadow: 5px 9px 0 var(--ink);
+}
+
+.monster-card:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+.monster-card img {
+  width: 100%;
+  height: clamp(64px, 12vh, 124px);
+  object-fit: contain;
+  filter: drop-shadow(0 4px 0 rgba(11, 4, 24, 0.7));
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.monster-card:hover:not(:disabled) img {
+  transform: rotate(-4deg) scale(1.06);
+}
+
+.monster-name {
+  font-size: clamp(14px, 2vh, 19px);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+/* Selected: lime glow, brighter card, check badge */
+.monster-card.selected {
+  background: #3d2a63;
+  border-color: var(--lime);
+  border-width: 4px;
+  box-shadow:
+    0 0 0 3px var(--ink),
+    5px 8px 0 3px var(--ink),
+    0 0 26px rgba(184, 242, 56, 0.45);
+}
+
+.monster-card.selected .monster-name {
+  color: var(--yellow);
+}
+
+.monster-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: -12px;
+  right: -10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding-top: 3px;
+  font-size: 20px;
+  color: var(--ink);
+  background: var(--lime);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  transform: rotate(8deg);
+}
+
+/* PNG not added yet */
+.monster-card.missing {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.monster-card.missing img {
+  visibility: hidden;
+}
+
+.monster-card.missing::before {
+  content: '?';
+  position: absolute;
+  top: 18%;
+  font-size: clamp(36px, 7vh, 64px);
+  color: rgba(233, 220, 255, 0.6);
+}
+
+.start-btn {
+  padding: 0.5em 1.4em 0.38em;
+  font-family: inherit;
+  font-size: clamp(28px, 5vh, 46px);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: #120614;
+  background: #ff7a1a;
+  border: 4px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 5px 7px 0 var(--ink);
+  transform: rotate(1.5deg);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.start-btn:hover {
+  background: #ff8c33;
+  transform: rotate(1.5deg) translateY(-2px);
+  box-shadow: 6px 9px 0 var(--ink);
+}
+
+.start-btn:active {
+  transform: rotate(1.5deg) translateY(3px);
+  box-shadow: 2px 3px 0 var(--ink);
+}
+
+.start-btn:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 4px;
+}
+
+.intro.shake {
+  animation: intro-shake 0.35s ease;
+}
+
+@keyframes intro-shake {
+  0%, 100% { transform: rotate(-1deg) translateX(0); }
+  25% { transform: rotate(-1deg) translateX(-10px); }
+  50% { transform: rotate(-1deg) translateX(9px); }
+  75% { transform: rotate(-1deg) translateX(-5px); }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Empty area reserved below the camera for the "IT WAS ... ALL ALONG!" reveal */
+.reveal-slot {
+  flex: none;
+  width: 100%;
+  height: var(--slot-h);
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-aspect-ratio: 1/1) {
+  .stage {
+    justify-content: center;
+  }
+  .frame-wrap {
+    width: 100%;
+  }
+  .banner-instruction {
+    font-size: 6.5vw;
+    height: 11vw;
+    bottom: -6vw;
+  }
+  .banner-reveal {
+    font-size: calc(5.6vw * var(--fit, 1));
+    height: 12vw;
+    bottom: -21vw;
+  }
+  .reset-btn {
+    font-size: 4.2vw;
+    bottom: -5.5vw;
+  }
+  #status {
+    font-size: 4vw;
+    max-width: 90%;
+  }
+}
